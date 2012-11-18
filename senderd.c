@@ -37,8 +37,6 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#include "types.h"
-
 #define SYSFREQ 1E6
 #define BUFLEN 512
 #define PORT 9930

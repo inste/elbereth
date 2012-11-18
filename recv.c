@@ -1,3 +1,19 @@
+/*
+ * Elbereth receiving daemon
+ * 
+ * Specific to mini2440 ARM board
+ *
+ *
+ * Copyright (c) 2012 Ilya Ponetayev <ilya.ponetaev@kodep.ru>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your option)
+ * any later version.
+ *
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,9 +39,7 @@
 
 #include "celt/celt.h"
 #include "celt/celt_types.h"
-
-#include "types.h"
-#include "ao.h"
+#include "ao/ao.h"
 
 
 #define		PORT		9930
@@ -46,6 +60,13 @@
 pthread_mutex_t mdata = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t bcdata = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t leddata = PTHREAD_MUTEX_INITIALIZER;
+
+struct AOutput {
+	ao_device * device;
+	ao_sample_format format;
+	int	default_driver;
+};
+
 
 struct ring_buffer {
 	void *		address;
@@ -82,6 +103,33 @@ enum recv_state {
 struct ledthread_data {
 	enum recv_state * state;
 };
+
+struct AOutput * aout_init(void) {
+	struct AOutput * ao = (struct AOutput *) malloc(sizeof(struct AOutput));
+	
+	ao_initialize();
+	ao->default_driver = ao_default_driver_id();
+	ao->format.bits = 16;
+	ao->format.channels = 2;
+	ao->format.rate = 44100;
+	ao->format.byte_format = AO_FMT_LITTLE;
+	ao->format.matrix = "L,R";
+	ao->device = ao_open_live(ao->default_driver, &(ao->format), NULL);
+
+	return ao;
+}
+
+
+void aout_play(struct AOutput * ao, void * buffer, int buffer_size) {
+	ao_play(ao->device, buffer, buffer_size);
+}
+
+
+void aout_close(struct AOutput * ao) {
+	ao_close(ao->device);
+	ao_shutdown();
+}
+
 
 //Warning order should be at least 12 for Linux
 void ring_buffer_create(struct ring_buffer * buffer, unsigned long order) {
@@ -516,4 +564,3 @@ drop_packet:
 	ring_buffer_free(&rbuf);
 	return 0;
 }
-
